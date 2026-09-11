@@ -569,7 +569,6 @@
     }
 
     if (viewMode === 'day') {
-      // Vergleich mit den letzten 7 Tagen (Woche)
       var nowTs = Date.now();
       var sevenDaysAgo = nowTs - (7 * 24 * 60 * 60 * 1000);
       var wDays = 0, wHourly = 0, wKlingelnH = 0, wKlingelnZ = 0, wEntschR = 0, wEntschZ = 0;
@@ -607,7 +606,6 @@
         applyTrend('trend-entscheiderPerZaehler', entscheiderPerZaehler, wEntschZ / wDays, true);
       }
     } else {
-      // Vergleich mit dem Vormonat
       var prevMonthPrefix = getMonthKeyOffset(-1);
       var pmWorkSec = 0, pmKlingeln = 0, pmEntscheider = 0, pmZaehler = 0, pmProvision = 0;
 
@@ -724,7 +722,7 @@
 
   function exportCSV() {
     var csvLines = [
-      "Datum;Arbeitszeit;Pausenzeit;Klingeln;Entscheider;Kunden;Abrechnung;Zaehler;Einzel_Provisionen_EUR;Gesamtprovision_EUR;EUR_pro_Std;Klingeln_pro_Std;Entscheiderquote_Prozent;EUR_pro_Klingeln"
+      "Datum;Arbeitszeit;Pausenzeit;Klingeln;Entscheider;Kunden;Abrechnung;Zaehler;Einzel_Provisionen_EUR;Gesamtprovision_EUR;EUR_pro_Std;Klingeln_pro_Std;Entscheiderquote_Prozent;Entscheider_pro_Zaehler;EUR_pro_Klingeln"
     ];
 
     saveData();
@@ -740,6 +738,7 @@
       var hProv = workHours > 0 ? (totalProv / workHours) : 0;
       var kPerHour = workHours > 0 ? ((d.klingeln || 0) / workHours) : 0;
       var eRate = (d.klingeln || 0) > 0 ? (((d.entscheider || 0) / d.klingeln) * 100) : 0;
+      var ePerZ = (d.zaehler || 0) > 0 ? (((d.entscheider || 0)) / d.zaehler) : 0;
       var eurPerK = (d.klingeln || 0) > 0 ? (totalProv / d.klingeln) : 0;
 
       var line = [
@@ -756,6 +755,7 @@
         hProv.toFixed(2).replace('.', ','),
         kPerHour.toFixed(1).replace('.', ','),
         eRate.toFixed(1).replace('.', ','),
+        ePerZ.toFixed(1).replace('.', ','),
         eurPerK.toFixed(2).replace('.', ',')
       ].join(';');
 
