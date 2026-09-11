@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Vertriebs- & Performance Tracker</title>
 
-  <!-- PWA LINKS -->
-  <link rel="manifest" href="manifest.json">
+  <!-- PWA MANIFEST (Inline Data-URI für maximale Kompatibilität) -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Vertriebs-%20%26%20Performance%20Tracker","short_name":"Tracker","start_url":"./index.html","display":"standalone","background_color":"%23f4f6f9","theme_color":"%23007bff","icons":[{"src":"https://via.placeholder.com/192/007bff/ffffff?text=Tracker","sizes":"192x192","type":"image/png"},{"src":"https://via.placeholder.com/512/007bff/ffffff?text=Tracker","sizes":"512x512","type":"image/png"}]}'>
+
   <meta name="theme-color" content="#007bff">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -548,7 +549,6 @@
     document.getElementById('val-euroPerKlingeln').innerText = euroPerKlingeln.toFixed(2).replace('.', ',') + ' €';
     document.getElementById('val-avgProvPerZaehler').innerText = avgProvPerZaehler.toFixed(2).replace('.', ',') + ' €';
 
-    // Trend-Berechnung
     function applyTrend(elementId, currentVal, refVal, lowerIsBetter) {
       var el = document.getElementById(elementId);
       if (refVal && refVal > 0) {
@@ -636,7 +636,6 @@
       applyTrend('trend-entscheiderPerZaehler', entscheiderPerZaehler, pmEntschZ, true);
     }
 
-    // Tagesrekord Check
     var maxPastProvision = 0;
     Object.keys(historyData).forEach(function(date) {
       if (date !== todayKey) {
@@ -778,14 +777,19 @@
   window.onload = function() {
     loadData();
 
+    // Inline-Service-Worker Registrierung (Keine separate sw.js Datei nötig)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(function(reg) {
-          console.log('SW registriert:', reg.scope);
-        })
-        .catch(function(err) {
-          console.error('SW Fehler:', err);
-        });
+      var swCode = `
+        const CACHE = 'tracker-v1';
+        self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.add('./'))));
+        self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+      `;
+      var blob = new Blob([swCode], { type: 'application/javascript' });
+      var swUrl = URL.createObjectURL(blob);
+
+      navigator.serviceWorker.register(swUrl)
+        .then(function(reg) { console.log('Inline SW registriert:', reg.scope); })
+        .catch(function(err) { console.error('SW Registrierung fehlgeschlagen:', err); });
     }
   };
 </script>
