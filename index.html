@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Vertriebs- & Performance Tracker</title>
 
-  <!-- PWA-META-TAGS (iOS & Android) -->
+  <!-- PWA LINKS -->
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007bff">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Vertrieb Tracker">
-
-  <!-- INLINE WEB APP MANIFEST (Keine externe manifest.json nötig) -->
-  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlZlcnRyaWVCcy0gJiBQZXJmb3JtYW5jZSBUcmFja2VyIiwKICAic2hvcnRfbmFtZSI6ICJWZXJ0cmllYiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjRmNmg5IiwKICAidGhlbWVfY29sb3IiOiAiIzAwN2JmZiIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDt1dGY4LDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMTAwIDEwMCc+PHJlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIHJ4PScyMCcgZmlsbD0nIzAwN2JmZicvPjx0ZXh0IHg9JzUwJyB5PSc2NScgZm9udC1zaXplPSc2MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZmlsbD0nd2hpdGUnPjE2ODA8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0KfQ==">
+  <meta name="apple-mobile-web-app-title" content="Tracker">
 
   <style>
     :root {
@@ -49,7 +47,26 @@
     }
 
     .card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
-    .card-title { font-weight: bold; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; color: #444; }
+    .card-title {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+      color: #444;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .select-mode {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 0.85rem;
+      background: #fff;
+      font-weight: normal;
+    }
 
     .timer-container { text-align: center; }
     .timer-display { font-size: 2.2rem; font-weight: bold; font-family: monospace; margin: 5px 0; }
@@ -210,7 +227,9 @@
 
   <!-- UMSATZ & FINANZEN -->
   <div class="card" style="margin-top: 15px;">
-    <div class="card-title">Finanzen & Stundensatz</div>
+    <div class="card-title">
+      <span>Finanzen & Stundensatz</span>
+    </div>
     <div class="prov-input">
       <label style="font-weight: bold; font-size: 0.85rem;">Standard-Provision (€):</label>
       <input type="number" id="val-defaultProv" step="5" value="50" oninput="saveData()">
@@ -231,7 +250,13 @@
 
   <!-- DETAILLIERTE AUSWERTUNG / PERFORMANCE -->
   <div class="card">
-    <div class="card-title">Performance-Auswertung</div>
+    <div class="card-title">
+      <span>Performance-Auswertung</span>
+      <select id="viewMode" class="select-mode" onchange="calculateStats()">
+        <option value="day">Heute</option>
+        <option value="month">Diesen Monat</option>
+      </select>
+    </div>
     <div class="stats-grid">
       <div class="stat-box">
         <div class="stat-label">Klingeln / Std.</div>
@@ -241,6 +266,7 @@
       <div class="stat-box">
         <div class="stat-label">Klingeln / Zähler</div>
         <div class="stat-val" id="val-klingelnPerZaehler">0,0</div>
+        <div class="trend-indicator" id="trend-klingelnPerZaehler"></div>
       </div>
       <div class="stat-box">
         <div class="stat-label">Entscheiderquote</div>
@@ -248,11 +274,16 @@
         <div class="trend-indicator" id="trend-entscheiderRate"></div>
       </div>
       <div class="stat-box">
+        <div class="stat-label">Entscheider / Zähler</div>
+        <div class="stat-val" id="val-entscheiderPerZaehler">0,0</div>
+        <div class="trend-indicator" id="trend-entscheiderPerZaehler"></div>
+      </div>
+      <div class="stat-box">
         <div class="stat-label">€ / Klingeln</div>
         <div class="stat-val" id="val-euroPerKlingeln">0,00 €</div>
       </div>
-      <div class="stat-box" style="grid-column: span 2;">
-        <div class="stat-label">Ø Provision pro Zähler</div>
+      <div class="stat-box">
+        <div class="stat-label">Ø Prov. / Zähler</div>
         <div class="stat-val" id="val-avgProvPerZaehler">0,00 €</div>
       </div>
     </div>
@@ -272,6 +303,7 @@
   var historyData = {};
 
   var state = {
+    date: getTodayKey(),
     timerState: 'stopped',
     accumulatedWorkMs: 0,
     accumulatedPauseMs: 0,
@@ -284,6 +316,32 @@
     provisionsList: [],
     defaultProv: 50
   };
+
+  function checkAndHandleDayChange() {
+    var today = getTodayKey();
+    if (state.date && state.date !== today) {
+      historyData[state.date] = JSON.parse(JSON.stringify(state));
+      historyData[state.date].times = getEffectiveTimes();
+
+      var keepDefaultProv = state.defaultProv || 50;
+      state = {
+        date: today,
+        timerState: 'stopped',
+        accumulatedWorkMs: 0,
+        accumulatedPauseMs: 0,
+        lastStateChangeTimestamp: null,
+        klingeln: 0,
+        entscheider: 0,
+        kunde: 0,
+        abrechnung: 0,
+        zaehler: 0,
+        provisionsList: [],
+        defaultProv: keepDefaultProv
+      };
+      saveData();
+      updateUI();
+    }
+  }
 
   function getEffectiveTimes() {
     var now = Date.now();
@@ -317,6 +375,8 @@
         document.getElementById('val-defaultProv').value = state.defaultProv || 50;
       }
     } catch (e) {}
+
+    checkAndHandleDayChange();
     updateUI();
   }
 
@@ -325,9 +385,9 @@
     if (defInput) {
       state.defaultProv = parseFloat(defInput.value) || 0;
     }
-    var today = getTodayKey();
-    historyData[today] = JSON.parse(JSON.stringify(state));
-    historyData[today].times = getEffectiveTimes();
+    state.date = getTodayKey();
+    historyData[state.date] = JSON.parse(JSON.stringify(state));
+    historyData[state.date].times = getEffectiveTimes();
 
     try {
       localStorage.setItem('trackerStateTimestamped', JSON.stringify(state));
@@ -336,6 +396,7 @@
   }
 
   setInterval(function() {
+    checkAndHandleDayChange();
     updateTimerDisplays();
     calculateStats();
   }, 250);
@@ -424,74 +485,80 @@
     }
   }
 
-  function calculateStats() {
-    var times = getEffectiveTimes();
-    var totalProvision = 0;
-    for (var i = 0; i < state.provisionsList.length; i++) {
-      totalProvision += state.provisionsList[i];
-    }
-    var workHours = times.workSeconds / 3600;
-    var hourlyProv = workHours > 0 ? (totalProvision / workHours) : 0;
+  function getMonthKeyOffset(offsetMonths) {
+    var d = new Date();
+    d.setMonth(d.getMonth() + offsetMonths);
+    return d.toISOString().substring(0, 7);
+  }
 
-    var klingelnPerHour = workHours > 0 ? (state.klingeln / workHours) : 0;
-    var klingelnPerZaehler = state.zaehler > 0 ? (state.klingeln / state.zaehler) : 0;
-    var entscheiderRate = state.klingeln > 0 ? ((state.entscheider / state.klingeln) * 100) : 0;
-    var euroPerKlingeln = state.klingeln > 0 ? (totalProvision / state.klingeln) : 0;
-    var avgProvPerZaehler = state.zaehler > 0 ? (totalProvision / state.zaehler) : 0;
+  function calculateStats() {
+    var viewMode = document.getElementById('viewMode') ? document.getElementById('viewMode').value : 'day';
+    var todayKey = getTodayKey();
+    var currentMonthPrefix = todayKey.substring(0, 7);
+
+    var workSeconds = 0;
+    var totalKlingeln = 0;
+    var totalEntscheider = 0;
+    var totalZaehler = 0;
+    var totalProvision = 0;
+
+    if (viewMode === 'month') {
+      Object.keys(historyData).forEach(function(dateKey) {
+        if (dateKey.indexOf(currentMonthPrefix) === 0) {
+          var day = historyData[dateKey];
+          var t = day.times || { workSeconds: 0 };
+          workSeconds += (t.workSeconds || 0);
+          totalKlingeln += (day.klingeln || 0);
+          totalEntscheider += (day.entscheider || 0);
+          totalZaehler += (day.zaehler || 0);
+
+          if (day.provisionsList) {
+            for (var i = 0; i < day.provisionsList.length; i++) {
+              totalProvision += day.provisionsList[i];
+            }
+          }
+        }
+      });
+    } else {
+      var times = getEffectiveTimes();
+      workSeconds = times.workSeconds;
+      totalKlingeln = state.klingeln || 0;
+      totalEntscheider = state.entscheider || 0;
+      totalZaehler = state.zaehler || 0;
+      for (var i = 0; i < state.provisionsList.length; i++) {
+        totalProvision += state.provisionsList[i];
+      }
+    }
+
+    var workHours = workSeconds / 3600;
+    var hourlyProv = workHours > 0 ? (totalProvision / workHours) : 0;
+    var klingelnPerHour = workHours > 0 ? (totalKlingeln / workHours) : 0;
+    var klingelnPerZaehler = totalZaehler > 0 ? (totalKlingeln / totalZaehler) : 0;
+    var entscheiderRate = totalKlingeln > 0 ? ((totalEntscheider / totalKlingeln) * 100) : 0;
+    var entscheiderPerZaehler = totalZaehler > 0 ? (totalEntscheider / totalZaehler) : 0;
+    var euroPerKlingeln = totalKlingeln > 0 ? (totalProvision / totalKlingeln) : 0;
+    var avgProvPerZaehler = totalZaehler > 0 ? (totalProvision / totalZaehler) : 0;
 
     document.getElementById('val-totalProv').innerText = totalProvision.toFixed(2).replace('.', ',') + ' €';
     document.getElementById('val-hourlyProv').innerText = hourlyProv.toFixed(2).replace('.', ',') + ' €/h';
     document.getElementById('val-klingelnPerHour').innerText = klingelnPerHour.toFixed(1).replace('.', ',') + ' / h';
     document.getElementById('val-klingelnPerZaehler').innerText = klingelnPerZaehler.toFixed(1).replace('.', ',');
     document.getElementById('val-entscheiderRate').innerText = entscheiderRate.toFixed(1).replace('.', ',') + ' %';
+    document.getElementById('val-entscheiderPerZaehler').innerText = entscheiderPerZaehler.toFixed(1).replace('.', ',');
     document.getElementById('val-euroPerKlingeln').innerText = euroPerKlingeln.toFixed(2).replace('.', ',') + ' €';
     document.getElementById('val-avgProvPerZaehler').innerText = avgProvPerZaehler.toFixed(2).replace('.', ',') + ' €';
 
-    var todayKey = getTodayKey();
-    var pastDaysCount = 0;
-    var pastHourlyTotal = 0;
-    var pastKlingelnTotal = 0;
-    var pastEntscheiderTotal = 0;
-    var maxPastProvision = 0;
-
-    Object.keys(historyData).forEach(function(date) {
-      if (date !== todayKey) {
-        var day = historyData[date];
-        var dayWorkHours = (day.times ? day.times.workSeconds : 0) / 3600;
-        var dayProv = 0;
-        if (day.provisionsList) {
-          for (var j = 0; j < day.provisionsList.length; j++) dayProv += day.provisionsList[j];
-        }
-        if (dayProv > maxPastProvision) maxPastProvision = dayProv;
-
-        if (dayWorkHours > 0) {
-          pastHourlyTotal += (dayProv / dayWorkHours);
-          pastKlingelnTotal += (day.klingeln / dayWorkHours);
-        }
-        if (day.klingeln > 0) {
-          pastEntscheiderTotal += ((day.entscheider / day.klingeln) * 100);
-        }
-        pastDaysCount++;
-      }
-    });
-
-    var badge = document.getElementById('recordBadge');
-    if (maxPastProvision > 0 && totalProvision > maxPastProvision) {
-      badge.style.display = 'block';
-    } else {
-      badge.style.display = 'none';
-    }
-
-    function applyTrend(elementId, currentVal, pastAvg) {
+    // Trend-Berechnung
+    function applyTrend(elementId, currentVal, refVal, lowerIsBetter) {
       var el = document.getElementById(elementId);
-      if (pastDaysCount > 0 && pastAvg > 0) {
-        var diff = Math.round(((currentVal - pastAvg) / pastAvg) * 100);
+      if (refVal && refVal > 0) {
+        var diff = Math.round(((currentVal - refVal) / refVal) * 100);
         if (diff > 0) {
-          el.innerText = '+' + diff + '% 📈';
-          el.className = 'trend-indicator trend-up';
+          el.innerText = '+' + diff + '% ' + (lowerIsBetter ? '📉' : '📈');
+          el.className = 'trend-indicator ' + (lowerIsBetter ? 'trend-down' : 'trend-up');
         } else if (diff < 0) {
-          el.innerText = diff + '% 📉';
-          el.className = 'trend-indicator trend-down';
+          el.innerText = diff + '% ' + (lowerIsBetter ? '📈' : '📉');
+          el.className = 'trend-indicator ' + (lowerIsBetter ? 'trend-up' : 'trend-down');
         } else {
           el.innerText = '0% =';
           el.className = 'trend-indicator';
@@ -501,9 +568,98 @@
       }
     }
 
-    applyTrend('trend-hourlyProv', hourlyProv, pastHourlyTotal / pastDaysCount);
-    applyTrend('trend-klingelnPerHour', klingelnPerHour, pastKlingelnTotal / pastDaysCount);
-    applyTrend('trend-entscheiderRate', entscheiderRate, pastEntscheiderTotal / pastDaysCount);
+    if (viewMode === 'day') {
+      // Vergleich mit den letzten 7 Tagen (Woche)
+      var nowTs = Date.now();
+      var sevenDaysAgo = nowTs - (7 * 24 * 60 * 60 * 1000);
+      var wDays = 0, wHourly = 0, wKlingelnH = 0, wKlingelnZ = 0, wEntschR = 0, wEntschZ = 0;
+
+      Object.keys(historyData).forEach(function(dateKey) {
+        var dTs = new Date(dateKey).getTime();
+        if (dateKey !== todayKey && dTs >= sevenDaysAgo) {
+          var day = historyData[dateKey];
+          var dHours = (day.times ? day.times.workSeconds : 0) / 3600;
+          var dProv = 0;
+          if (day.provisionsList) {
+            for (var m = 0; m < day.provisionsList.length; m++) dProv += day.provisionsList[m];
+          }
+
+          if (dHours > 0) {
+            wHourly += (dProv / dHours);
+            wKlingelnH += (day.klingeln / dHours);
+          }
+          if (day.zaehler > 0) {
+            wKlingelnZ += (day.klingeln / day.zaehler);
+            wEntschZ += (day.entscheider / day.zaehler);
+          }
+          if (day.klingeln > 0) {
+            wEntschR += ((day.entscheider / day.klingeln) * 100);
+          }
+          wDays++;
+        }
+      });
+
+      if (wDays > 0) {
+        applyTrend('trend-hourlyProv', hourlyProv, wHourly / wDays, false);
+        applyTrend('trend-klingelnPerHour', klingelnPerHour, wKlingelnH / wDays, false);
+        applyTrend('trend-klingelnPerZaehler', klingelnPerZaehler, wKlingelnZ / wDays, true);
+        applyTrend('trend-entscheiderRate', entscheiderRate, wEntschR / wDays, false);
+        applyTrend('trend-entscheiderPerZaehler', entscheiderPerZaehler, wEntschZ / wDays, true);
+      }
+    } else {
+      // Vergleich mit dem Vormonat
+      var prevMonthPrefix = getMonthKeyOffset(-1);
+      var pmWorkSec = 0, pmKlingeln = 0, pmEntscheider = 0, pmZaehler = 0, pmProvision = 0;
+
+      Object.keys(historyData).forEach(function(dateKey) {
+        if (dateKey.indexOf(prevMonthPrefix) === 0) {
+          var day = historyData[dateKey];
+          pmWorkSec += (day.times ? day.times.workSeconds : 0);
+          pmKlingeln += (day.klingeln || 0);
+          pmEntscheider += (day.entscheider || 0);
+          pmZaehler += (day.zaehler || 0);
+          if (day.provisionsList) {
+            for (var p = 0; p < day.provisionsList.length; p++) pmProvision += day.provisionsList[p];
+          }
+        }
+      });
+
+      var pmHours = pmWorkSec / 3600;
+      var pmHourlyProv = pmHours > 0 ? (pmProvision / pmHours) : 0;
+      var pmKlingelnH = pmHours > 0 ? (pmKlingeln / pmHours) : 0;
+      var pmKlingelnZ = pmZaehler > 0 ? (pmKlingeln / pmZaehler) : 0;
+      var pmEntschR = pmKlingeln > 0 ? ((pmEntscheider / pmKlingeln) * 100) : 0;
+      var pmEntschZ = pmZaehler > 0 ? (pmEntscheider / pmZaehler) : 0;
+
+      applyTrend('trend-hourlyProv', hourlyProv, pmHourlyProv, false);
+      applyTrend('trend-klingelnPerHour', klingelnPerHour, pmKlingelnH, false);
+      applyTrend('trend-klingelnPerZaehler', klingelnPerZaehler, pmKlingelnZ, true);
+      applyTrend('trend-entscheiderRate', entscheiderRate, pmEntschR, false);
+      applyTrend('trend-entscheiderPerZaehler', entscheiderPerZaehler, pmEntschZ, true);
+    }
+
+    // Tagesrekord Check
+    var maxPastProvision = 0;
+    Object.keys(historyData).forEach(function(date) {
+      if (date !== todayKey) {
+        var day = historyData[date];
+        var dayProv = 0;
+        if (day.provisionsList) {
+          for (var j = 0; j < day.provisionsList.length; j++) dayProv += day.provisionsList[j];
+        }
+        if (dayProv > maxPastProvision) maxPastProvision = dayProv;
+      }
+    });
+
+    var todaysTotalProv = 0;
+    for (var k = 0; k < state.provisionsList.length; k++) todaysTotalProv += state.provisionsList[k];
+
+    var badge = document.getElementById('recordBadge');
+    if (maxPastProvision > 0 && todaysTotalProv > maxPastProvision) {
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
   }
 
   function updateUI() {
@@ -546,8 +702,9 @@
   }
 
   function resetDay() {
-    if (confirm("Wirklich alle Zähler, Zähler-Provisionen und Zeiten zurücksetzen?")) {
+    if (confirm("Wirklich alle Zähler, Zähler-Provisionen und Zeiten für den HEUTIGEN Tag zurücksetzen?")) {
       state = {
+        date: getTodayKey(),
         timerState: 'stopped',
         accumulatedWorkMs: 0,
         accumulatedPauseMs: 0,
@@ -572,7 +729,7 @@
 
     saveData();
 
-    Object.keys(historyData).forEach(function(dateKey) {
+    Object.keys(historyData).sort().forEach(function(dateKey) {
       var d = historyData[dateKey];
       var t = d.times || { workSeconds: 0, pauseSeconds: 0 };
       var workHours = t.workSeconds / 3600;
@@ -618,30 +775,18 @@
     document.body.removeChild(link);
   }
 
-  // INLINE SERVICE WORKER (Erzeugt den Service Worker dynamisch ohne externe sw.js)
-  function registerInlineSW() {
-    if ('serviceWorker' in navigator) {
-      var swCode = `
-        const CACHE_NAME = 'vertrieb-v1';
-        self.addEventListener('install', e => {
-          e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
-          self.skipWaiting();
-        });
-        self.addEventListener('fetch', e => {
-          e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
-        });
-      `;
-      var blob = new Blob([swCode], { type: 'text/javascript' });
-      var blobUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(blobUrl).catch(function(err) {
-        console.log('SW Info:', err);
-      });
-    }
-  }
-
   window.onload = function() {
     loadData();
-    registerInlineSW();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(function(reg) {
+          console.log('SW registriert:', reg.scope);
+        })
+        .catch(function(err) {
+          console.error('SW Fehler:', err);
+        });
+    }
   };
 </script>
 
