@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Vertriebs- & Performance Tracker</title>
 
-  <!-- PWA & Mobile Anpassungen -->
-  <link rel="manifest" href="manifest.json">
+  <!-- PWA-META-TAGS (iOS & Android) -->
   <meta name="theme-color" content="#007bff">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Tracker">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="Vertrieb Tracker">
+
+  <!-- INLINE WEB APP MANIFEST (Keine externe manifest.json nötig) -->
+  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlZlcnRyaWVCcy0gJiBQZXJmb3JtYW5jZSBUcmFja2VyIiwKICAic2hvcnRfbmFtZSI6ICJWZXJ0cmllYiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjRmNmg5IiwKICAidGhlbWVfY29sb3IiOiAiIzAwN2JmZiIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDt1dGY4LDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMTAwIDEwMCc+PHJlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIHJ4PScyMCcgZmlsbD0nIzAwN2JmZicvPjx0ZXh0IHg9JzUwJyB5PSc2NScgZm9udC1zaXplPSc2MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZmlsbD0nd2hpdGUnPjE2ODA8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0KfQ==">
 
   <style>
     :root {
@@ -617,19 +618,30 @@
     document.body.removeChild(link);
   }
 
+  // INLINE SERVICE WORKER (Erzeugt den Service Worker dynamisch ohne externe sw.js)
+  function registerInlineSW() {
+    if ('serviceWorker' in navigator) {
+      var swCode = `
+        const CACHE_NAME = 'vertrieb-v1';
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
+          self.skipWaiting();
+        });
+        self.addEventListener('fetch', e => {
+          e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+        });
+      `;
+      var blob = new Blob([swCode], { type: 'text/javascript' });
+      var blobUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(blobUrl).catch(function(err) {
+        console.log('SW Info:', err);
+      });
+    }
+  }
+
   window.onload = function() {
     loadData();
-
-    // Service Worker Registrierung (optimiert für GitHub Pages)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(function(reg) {
-          console.log('Service Worker erfolgreich registriert Scope:', reg.scope);
-        })
-        .catch(function(err) {
-          console.error('Service Worker Registrierungsfehler:', err);
-        });
-    }
+    registerInlineSW();
   };
 </script>
 
